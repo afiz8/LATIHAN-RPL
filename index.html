@@ -1,16 +1,155 @@
+
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <title>Project Web Sederhana</title>
+<meta charset="UTF-8">
+<title>Login & Register Pro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    font-family: Arial;
+    background: linear-gradient(135deg,#667eea,#764ba2);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    width: 320px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+h2 {
+    text-align: center;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin: 6px 0;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #5a67d8;
+}
+
+.switch {
+    text-align: center;
+    margin-top: 10px;
+    cursor: pointer;
+    color: blue;
+}
+
+.hidden {
+    display: none;
+}
+
+.dashboard {
+    text-align: center;
+}
+</style>
 </head>
+
 <body>
 
-<h1>Selamat Datang</h1>
-<p>Ini adalah project web sederhana untuk praktikum Software Configuration Management.</p>
+<div class="container">
 
-<h2>Update Project</h2>
-<p>Perubahan ini dibuat untuk latihan commit kedua pada GitHub.</p>
+<!-- LOGIN -->
+<div id="loginForm">
+    <h2>Login</h2>
+    <input type="text" id="loginUser" placeholder="Username">
+    <input type="password" id="loginPass" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <div class="switch" onclick="showRegister()">Belum punya akun? Daftar</div>
+</div>
+
+<!-- REGISTER -->
+<div id="registerForm" class="hidden">
+    <h2>Register</h2>
+    <input type="text" id="regUser" placeholder="Username">
+    <input type="password" id="regPass" placeholder="Password">
+    <button onclick="register()">Daftar</button>
+    <div class="switch" onclick="showLogin()">Sudah punya akun? Login</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="hidden dashboard">
+    <h2>Welcome 👋</h2>
+    <p id="userDisplay"></p>
+    <button onclick="logout()">Logout</button>
+</div>
+
+</div>
+
+<script>
+// SIMPAN USER
+function register() {
+    let user = document.getElementById("regUser").value;
+    let pass = document.getElementById("regPass").value;
+
+    if(user === "" || pass === "") {
+        alert("Isi semua data!");
+        return;
+    }
+
+    localStorage.setItem("user", user);
+    localStorage.setItem("pass", pass);
+
+    alert("Register berhasil!");
+    showLogin();
+}
+
+// LOGIN
+function login() {
+    let user = document.getElementById("loginUser").value;
+    let pass = document.getElementById("loginPass").value;
+
+    let savedUser = localStorage.getItem("user");
+    let savedPass = localStorage.getItem("pass");
+
+    if(user === savedUser && pass === savedPass) {
+        document.getElementById("loginForm").classList.add("hidden");
+        document.getElementById("dashboard").classList.remove("hidden");
+        document.getElementById("userDisplay").innerText = user;
+    } else {
+        alert("Username atau Password salah!");
+    }
+}
+
+// LOGOUT
+function logout() {
+    location.reload();
+}
+
+// SWITCH
+function showRegister() {
+    document.getElementById("loginForm").classList.add("hidden");
+    document.getElementById("registerForm").classList.remove("hidden");
+}
+
+function showLogin() {
+    document.getElementById("registerForm").classList.add("hidden");
+    document.getElementById("loginForm").classList.remove("hidden");
+}
+</script>
 
 </body>
 </html>
