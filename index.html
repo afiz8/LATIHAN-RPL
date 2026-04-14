@@ -2,139 +2,111 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Absensi Secure Pro</title>
+<title>Login & Absensi</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body {
+body{
     font-family: Arial;
     background: linear-gradient(135deg,#667eea,#764ba2);
-    color: white;
-    text-align: center;
+    color:white;
+    text-align:center;
 }
-.container {
-    margin: 20px auto;
-    width: 350px;
+.container{
+    margin-top:50px;
 }
-input, button {
-    width: 100%;
-    padding: 10px;
-    margin: 5px 0;
-    border-radius: 6px;
-    border: none;
+input,button{
+    padding:10px;
+    margin:5px;
 }
-button { background: #00c9a7; }
-.hidden { display: none; }
-table {
-    width: 100%;
-    margin-top: 10px;
-    background: white;
-    color: black;
-    border-radius: 10px;
+.hidden{display:none;}
+table{
+    margin:auto;
+    background:white;
+    color:black;
+    border-collapse: collapse;
+}
+td,th{
+    border:1px solid black;
+    padding:8px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="container">
-
-<div id="auth">
-    <h2>Login / Register</h2>
-    <input id="user" placeholder="Username">
-    <input id="pass" type="password" placeholder="Password">
-    <button onclick="register()">Register</button>
+<div class="container" id="auth">
+    <h2>Login</h2>
+    <input id="username" placeholder="Username"><br>
+    <input id="password" type="password" placeholder="Password"><br>
     <button onclick="login()">Login</button>
     <p id="msg"></p>
 </div>
 
-<div id="app" class="hidden">
-    <h2>Absensi 🚀</h2>
-    <p id="welcome"></p>
+<div class="container hidden" id="app">
+    <h2 id="welcome"></h2>
 
     <input id="nama" placeholder="Nama">
     <button onclick="tambah()">Tambah Absen</button>
+    <button onclick="logout()">Logout</button>
+
+    <br><br>
 
     <table id="tabel"></table>
-
-    <button onclick="logout()">Logout</button>
-</div>
-
 </div>
 
 <script>
-// ===== HASH PASSWORD =====
-async function hashPassword(password) {
-    const data = new TextEncoder().encode(password);
-    const hash = await crypto.subtle.digest("SHA-256", data);
-    return Array.from(new Uint8Array(hash))
-        .map(b => b.toString(16).padStart(2,'0')).join('');
-}
 
-// ===== USER STORAGE =====
-function getUsers(){ return JSON.parse(localStorage.getItem("users"))||[]; }
-function saveUsers(u){ localStorage.setItem("users",JSON.stringify(u)); }
+// ===== BACKEND URL =====
+const BASE_URL = "https://cbf1487d-f619-4cdc-8f65-954cc75751c0-00-27ker2816xs3s.sisko.replit.dev";
+
+// ===== ELEMENT =====
+const user = document.getElementById("username");
+const pass = document.getElementById("password");
+const msg = document.getElementById("msg");
+const auth = document.getElementById("auth");
+const app = document.getElementById("app");
+const welcome = document.getElementById("welcome");
+const nama = document.getElementById("nama");
+const tabel = document.getElementById("tabel");
 
 // ===== SESSION =====
-function setSession(u){ localStorage.setItem("session",u); }
-function getSession(){ return localStorage.getItem("session"); }
-
-// ===== VALIDASI =====
-function validUsername(u){
-    return /^[a-zA-Z0-9]{3,}$/.test(u);
+function setSession(u){
+    localStorage.setItem("session",u);
+}
+function getSession(){
+    return localStorage.getItem("session");
 }
 
-// ===== REGISTER =====
-async function register(){
-    try{
-        let u=user.value.trim();
-        let p=pass.value.trim();
-
-        if(!u || !p) return msg.innerText="Semua field wajib!";
-        if(!validUsername(u)) return msg.innerText="Username min 3 huruf/angka!";
-        if(p.length < 6) return msg.innerText="Password min 6 karakter!";
-
-        let users=getUsers();
-
-        if(users.find(x=>x.username.toLowerCase()===u.toLowerCase())){
-            return msg.innerText="Username sudah ada!";
-        }
-
-        let h=await hashPassword(p);
-
-        users.push({username:u,password:h});
-        saveUsers(users);
-
-        console.log("Register:", u);
-        msg.innerText="Register berhasil!";
-    }catch(e){
-        alert("Error register!");
-    }
-}
-
-// ===== LOGIN =====
+// ===== LOGIN (FIX BACKEND) =====
 async function login(){
     try{
-        let u=user.value.trim();
-        let p=pass.value.trim();
+        let u = user.value.trim();
+        let p = pass.value.trim();
 
-        let h=await hashPassword(p);
-        let users=getUsers();
+        let res = await fetch(BASE_URL + "/login", {
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body: JSON.stringify({
+                username: u,
+                password: p
+            })
+        });
 
-        let found=users.find(x=>
-            x.username.toLowerCase()===u.toLowerCase() &&
-            x.password===h
-        );
+        let data = await res.json();
 
-        if(found){
+        if(data.status === "success"){
             setSession(u);
-            console.log("Login:", u);
+            msg.innerText = "";
             startApp();
-        } else {
-            msg.innerText="Login gagal!";
+        }else{
+            msg.innerText = "Login gagal!";
         }
+
     }catch(e){
-        alert("Error login!");
+        msg.innerText = "Server error!";
     }
 }
 
@@ -144,55 +116,49 @@ function logout(){
     location.reload();
 }
 
-// ===== APP =====
+// ===== START APP =====
 function startApp(){
-    if(!getSession()) return location.reload();
+    if(!getSession()) return;
 
     auth.classList.add("hidden");
     app.classList.remove("hidden");
-    welcome.innerText="Welcome, "+getSession();
+
+    welcome.innerText = "Welcome, " + getSession();
     loadData();
 }
 
-// ===== DATA =====
+// ===== DATA LOCAL (ABSEN MASIH LOCAL) =====
 function getData(){
-    return JSON.parse(localStorage.getItem("absen"))||[];
+    return JSON.parse(localStorage.getItem("absen")) || [];
 }
 function saveData(d){
-    localStorage.setItem("absen",JSON.stringify(d));
+    localStorage.setItem("absen", JSON.stringify(d));
 }
 
 // ===== TAMBAH =====
 function tambah(){
-    try{
-        let n=nama.value.trim();
-        if(!n) return alert("Nama wajib diisi!");
+    let n = nama.value.trim();
+    if(!n) return alert("Nama wajib diisi!");
 
-        let data=getData();
+    let data = getData();
 
-        // ANTI DUPLIKAT
-        if(data.find(d=>d.nama.toLowerCase()===n.toLowerCase())){
-            return alert("Nama sudah absen!");
-        }
-
-        data.push({
-            nama:n,
-            waktu:new Date().toLocaleString()
-        });
-
-        saveData(data);
-        console.log("Tambah absen:", n);
-
-        nama.value="";
-        loadData();
-    }catch(e){
-        alert("Error tambah data!");
+    if(data.find(d => d.nama.toLowerCase() === n.toLowerCase())){
+        return alert("Nama sudah absen!");
     }
+
+    data.push({
+        nama:n,
+        waktu:new Date().toLocaleString()
+    });
+
+    saveData(data);
+    nama.value="";
+    loadData();
 }
 
 // ===== HAPUS =====
 function hapus(i){
-    let data=getData();
+    let data = getData();
     data.splice(i,1);
     saveData(data);
     loadData();
@@ -200,7 +166,7 @@ function hapus(i){
 
 // ===== LOAD TABLE =====
 function loadData(){
-    let data=getData();
+    let data = getData();
 
     let html = `
     <tr>
@@ -222,7 +188,10 @@ function loadData(){
 }
 
 // ===== AUTO LOGIN =====
-if(getSession()) startApp();
+if(getSession()){
+    startApp();
+}
+
 </script>
 
 </body>
