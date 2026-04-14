@@ -78,11 +78,16 @@ function getSession(){
     return localStorage.getItem("session");
 }
 
-// ===== LOGIN (FIX BACKEND) =====
+// ===== LOGIN (BACKEND CONNECT) =====
 async function login(){
     try{
         let u = user.value.trim();
         let p = pass.value.trim();
+
+        if(!u || !p){
+            msg.innerText = "Isi username & password!";
+            return;
+        }
 
         let res = await fetch(BASE_URL + "/login", {
             method:"POST",
@@ -106,7 +111,7 @@ async function login(){
         }
 
     }catch(e){
-        msg.innerText = "Server error!";
+        msg.innerText = "Server error! (cek backend)";
     }
 }
 
@@ -127,7 +132,7 @@ function startApp(){
     loadData();
 }
 
-// ===== DATA LOCAL (ABSEN MASIH LOCAL) =====
+// ===== DATA LOCAL (ABSEN) =====
 function getData(){
     return JSON.parse(localStorage.getItem("absen")) || [];
 }
