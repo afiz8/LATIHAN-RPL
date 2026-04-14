@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Login & Absensi</title>
+<title>Login & Absensi Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -12,8 +12,11 @@ body{
     color:white;
     text-align:center;
 }
-.container{ margin-top:50px; }
-input,button{ padding:10px; margin:5px; }
+.container{ margin-top:40px; }
+input,button{
+    padding:10px;
+    margin:5px;
+}
 .hidden{ display:none; }
 table{
     margin:auto;
@@ -35,15 +38,30 @@ td,th{
     <input id="username" placeholder="Username"><br>
     <input id="password" type="password" placeholder="Password"><br>
     <button onclick="login()">Login</button>
+
     <p id="msg"></p>
+
+    <hr>
+
+    <h3>Register</h3>
+    <input id="reg_user" placeholder="Username"><br>
+    <input id="reg_pass" type="password" placeholder="Password"><br>
+    <button onclick="register()">Register</button>
 </div>
 
 <div class="container hidden" id="app">
     <h2 id="welcome"></h2>
 
+    <h3 id="jam"></h3>
+    <h3 id="total"></h3>
+
     <input id="nama" placeholder="Nama">
     <button onclick="tambah()">Tambah Absen</button>
     <button onclick="logout()">Logout</button>
+
+    <br><br>
+
+    <input id="search" placeholder="Cari nama..." onkeyup="loadData()">
 
     <br><br>
 
@@ -52,10 +70,10 @@ td,th{
 
 <script>
 
-// ================= CONFIG =================
+// ===== CONFIG =====
 const BASE_URL = "https://cbf1487d-f619-4cdc-8f65-954cc75751c0-00-27ker2816xs3s.sisko.replit.dev";
 
-// ================= ELEMENT =================
+// ===== ELEMENT =====
 const user = document.getElementById("username");
 const pass = document.getElementById("password");
 const msg = document.getElementById("msg");
@@ -65,7 +83,7 @@ const welcome = document.getElementById("welcome");
 const nama = document.getElementById("nama");
 const tabel = document.getElementById("tabel");
 
-// ================= SESSION =================
+// ===== SESSION =====
 function setSession(u){
     localStorage.setItem("session",u);
 }
@@ -73,30 +91,54 @@ function getSession(){
     return localStorage.getItem("session");
 }
 
-// ================= CEK SERVER =================
+// ===== JAM REALTIME =====
+setInterval(()=>{
+    document.getElementById("jam").innerText =
+        "Jam: " + new Date().toLocaleTimeString();
+},1000);
+
+// ===== CEK SERVER =====
 async function cekServer(){
     try{
         await fetch(BASE_URL);
         console.log("Server ON");
     }catch{
-        alert("Backend sedang OFFLINE!");
+        alert("Backend OFFLINE!");
     }
 }
 cekServer();
 
-// ================= LOGIN =================
+// ===== REGISTER =====
+async function register(){
+    let u = document.getElementById("reg_user").value.trim();
+    let p = document.getElementById("reg_pass").value.trim();
+
+    if(!u || !p) return alert("Isi semua!");
+    if(p.length < 3) return alert("Password minimal 3!");
+
+    let res = await fetch(BASE_URL + "/register", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ username:u, password:p })
+    });
+
+    let data = await res.json();
+
+    if(data.status === "success"){
+        alert("Register berhasil!");
+    }else{
+        alert("User sudah ada!");
+    }
+}
+
+// ===== LOGIN =====
 async function login(){
     try{
         let u = user.value.trim();
         let p = pass.value.trim();
 
-        // VALIDASI
         if(!u || !p){
             msg.innerText = "Isi username & password!";
-            return;
-        }
-        if(p.length < 3){
-            msg.innerText = "Password minimal 3 karakter!";
             return;
         }
 
@@ -105,36 +147,33 @@ async function login(){
         let res = await fetch(BASE_URL + "/login", {
             method:"POST",
             headers:{ "Content-Type":"application/json" },
-            body: JSON.stringify({ username: u, password: p })
+            body: JSON.stringify({ username:u, password:p })
         });
 
         let data = await res.json();
 
         if(data.status === "success"){
             setSession(u);
-            msg.innerText = "";
-
-            // CLEAR INPUT
-            user.value = "";
-            pass.value = "";
-
+            user.value="";
+            pass.value="";
+            msg.innerText="";
             startApp();
         }else{
             msg.innerText = "Login gagal!";
         }
 
     }catch(e){
-        msg.innerText = "Server sedang offline, coba lagi!";
+        msg.innerText = "Server error!";
     }
 }
 
-// ================= LOGOUT =================
+// ===== LOGOUT =====
 function logout(){
     localStorage.removeItem("session");
     location.reload();
 }
 
-// ================= START APP =================
+// ===== START =====
 function startApp(){
     if(!getSession()) return;
 
@@ -145,7 +184,7 @@ function startApp(){
     loadData();
 }
 
-// ================= TAMBAH ABSEN =================
+// ===== TAMBAH =====
 async function tambah(){
     let n = nama.value.trim();
 
@@ -161,12 +200,13 @@ async function tambah(){
     let data = await res.json();
 
     if(data.status === "success"){
+        msg.innerText = "Berhasil tambah!";
         nama.value="";
         loadData();
     }
 }
 
-// ================= HAPUS =================
+// ===== HAPUS =====
 async function hapus(i){
     await fetch(BASE_URL + "/absen/" + i, {
         method:"DELETE"
@@ -174,10 +214,12 @@ async function hapus(i){
     loadData();
 }
 
-// ================= LOAD DATA =================
+// ===== LOAD =====
 async function loadData(){
     let res = await fetch(BASE_URL + "/absen");
     let data = await res.json();
+
+    let keyword = document.getElementById("search").value.toLowerCase();
 
     let html = `
     <tr>
@@ -186,7 +228,14 @@ async function loadData(){
         <th>Aksi</th>
     </tr>`;
 
-    data.forEach((d,i)=>{
+    let filtered = data.filter(d =>
+        d.nama.toLowerCase().includes(keyword)
+    );
+
+    document.getElementById("total").innerText =
+        "Total Absen: " + filtered.length;
+
+    filtered.forEach((d,i)=>{
         html += `
         <tr>
             <td>${d.nama}</td>
@@ -198,7 +247,7 @@ async function loadData(){
     tabel.innerHTML = html;
 }
 
-// ================= AUTO LOGIN =================
+// ===== AUTO LOGIN =====
 if(getSession()){
     startApp();
 }
