@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Absensi Pro</title>
+<title>Absensi Secure Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -23,10 +23,7 @@ input, button {
     border-radius: 6px;
     border: none;
 }
-button {
-    background: #00c9a7;
-    color: white;
-}
+button { background: #00c9a7; }
 .hidden { display: none; }
 table {
     width: 100%;
@@ -58,13 +55,7 @@ table {
     <input id="nama" placeholder="Nama">
     <button onclick="tambah()">Tambah Absen</button>
 
-    <table id="tabel">
-        <tr>
-            <th>Nama</th>
-            <th>Waktu</th>
-            <th>Aksi</th>
-        </tr>
-    </table>
+    <table id="tabel"></table>
 
     <button onclick="logout()">Logout</button>
 </div>
@@ -72,7 +63,7 @@ table {
 </div>
 
 <script>
-// HASH
+// ===== HASH PASSWORD =====
 async function hashPassword(password) {
     const data = new TextEncoder().encode(password);
     const hash = await crypto.subtle.digest("SHA-256", data);
@@ -80,80 +71,126 @@ async function hashPassword(password) {
         .map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-// USER
+// ===== USER STORAGE =====
 function getUsers(){ return JSON.parse(localStorage.getItem("users"))||[]; }
 function saveUsers(u){ localStorage.setItem("users",JSON.stringify(u)); }
 
-// SESSION
+// ===== SESSION =====
 function setSession(u){ localStorage.setItem("session",u); }
 function getSession(){ return localStorage.getItem("session"); }
 
-// REGISTER
-async function register(){
-    let u=user.value.trim();
-    let p=pass.value.trim();
-    if(!u||!p) return msg.innerText="Isi semua!";
-    let users=getUsers();
-    if(users.find(x=>x.username===u)) return msg.innerText="User ada!";
-    let h=await hashPassword(p);
-    users.push({username:u,password:h});
-    saveUsers(users);
-    msg.innerText="Register sukses!";
+// ===== VALIDASI =====
+function validUsername(u){
+    return /^[a-zA-Z0-9]{3,}$/.test(u);
 }
 
-// LOGIN
-async function login(){
-    let u=user.value.trim();
-    let p=pass.value.trim();
-    let h=await hashPassword(p);
-    let users=getUsers();
-    let found=users.find(x=>x.username===u && x.password===h);
-    if(found){
-        setSession(u);
-        startApp();
-    } else {
-        msg.innerText="Login gagal!";
+// ===== REGISTER =====
+async function register(){
+    try{
+        let u=user.value.trim();
+        let p=pass.value.trim();
+
+        if(!u || !p) return msg.innerText="Semua field wajib!";
+        if(!validUsername(u)) return msg.innerText="Username min 3 huruf/angka!";
+        if(p.length < 6) return msg.innerText="Password min 6 karakter!";
+
+        let users=getUsers();
+
+        if(users.find(x=>x.username.toLowerCase()===u.toLowerCase())){
+            return msg.innerText="Username sudah ada!";
+        }
+
+        let h=await hashPassword(p);
+
+        users.push({username:u,password:h});
+        saveUsers(users);
+
+        console.log("Register:", u);
+        msg.innerText="Register berhasil!";
+    }catch(e){
+        alert("Error register!");
     }
 }
 
-// LOGOUT
+// ===== LOGIN =====
+async function login(){
+    try{
+        let u=user.value.trim();
+        let p=pass.value.trim();
+
+        let h=await hashPassword(p);
+        let users=getUsers();
+
+        let found=users.find(x=>
+            x.username.toLowerCase()===u.toLowerCase() &&
+            x.password===h
+        );
+
+        if(found){
+            setSession(u);
+            console.log("Login:", u);
+            startApp();
+        } else {
+            msg.innerText="Login gagal!";
+        }
+    }catch(e){
+        alert("Error login!");
+    }
+}
+
+// ===== LOGOUT =====
 function logout(){
     localStorage.removeItem("session");
     location.reload();
 }
 
-// APP
+// ===== APP =====
 function startApp(){
+    if(!getSession()) return location.reload();
+
     auth.classList.add("hidden");
     app.classList.remove("hidden");
     welcome.innerText="Welcome, "+getSession();
     loadData();
 }
 
-// DATA ABSEN
+// ===== DATA =====
 function getData(){
     return JSON.parse(localStorage.getItem("absen"))||[];
 }
-
 function saveData(d){
     localStorage.setItem("absen",JSON.stringify(d));
 }
 
-// TAMBAH
+// ===== TAMBAH =====
 function tambah(){
-    let n=nama.value.trim();
-    if(!n) return;
-    let data=getData();
-    data.push({
-        nama:n,
-        waktu:new Date().toLocaleString()
-    });
-    saveData(data);
-    nama.value="";
-    loadData();
+    try{
+        let n=nama.value.trim();
+        if(!n) return alert("Nama wajib diisi!");
+
+        let data=getData();
+
+        // ANTI DUPLIKAT
+        if(data.find(d=>d.nama.toLowerCase()===n.toLowerCase())){
+            return alert("Nama sudah absen!");
+        }
+
+        data.push({
+            nama:n,
+            waktu:new Date().toLocaleString()
+        });
+
+        saveData(data);
+        console.log("Tambah absen:", n);
+
+        nama.value="";
+        loadData();
+    }catch(e){
+        alert("Error tambah data!");
+    }
 }
 
-// HAPUS
+// ===== HAPUS =====
 function hapus(i){
     let data=getData();
     data.splice(i,1);
@@ -161,15 +198,17 @@ function hapus(i){
     loadData();
 }
 
-// LOAD TABLE
+// ===== LOAD TABLE =====
 function loadData(){
     let data=getData();
+
     let html = `
     <tr>
         <th>Nama</th>
         <th>Waktu</th>
         <th>Aksi</th>
     </tr>`;
+
     data.forEach((d,i)=>{
         html += `
         <tr>
@@ -178,10 +217,11 @@ function loadData(){
             <td><button onclick="hapus(${i})">Hapus</button></td>
         </tr>`;
     });
-    tabel.innerHTML=html;
+
+    tabel.innerHTML = html;
 }
 
-// AUTO LOGIN
+// ===== AUTO LOGIN =====
 if(getSession()) startApp();
 </script>
 
