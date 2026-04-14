@@ -2,64 +2,38 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Login System Pro</title>
+<title>Absensi Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 body {
     font-family: Arial;
     background: linear-gradient(135deg,#667eea,#764ba2);
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.container {
-    background: white;
-    padding: 25px;
-    border-radius: 12px;
-    width: 320px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-}
-
-h2 { text-align: center; }
-
-input {
-    width: 100%;
-    padding: 10px;
-    margin: 6px 0;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-}
-
-button {
-    width: 100%;
-    padding: 10px;
-    background: #667eea;
     color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-button:hover { background: #5a67d8; }
-
-.switch {
     text-align: center;
-    margin-top: 10px;
-    cursor: pointer;
-    color: blue;
 }
-
-.hidden { display: none; }
-
-.dashboard { text-align: center; }
-
-.msg {
-    text-align: center;
-    font-size: 14px;
+.container {
+    margin: 20px auto;
+    width: 350px;
+}
+input, button {
+    width: 100%;
+    padding: 10px;
     margin: 5px 0;
+    border-radius: 6px;
+    border: none;
+}
+button {
+    background: #00c9a7;
+    color: white;
+}
+.hidden { display: none; }
+table {
+    width: 100%;
+    margin-top: 10px;
+    background: white;
+    color: black;
+    border-radius: 10px;
 }
 </style>
 </head>
@@ -68,113 +42,147 @@ button:hover { background: #5a67d8; }
 
 <div class="container">
 
-<!-- LOGIN -->
-<div id="loginForm">
-    <h2>Login</h2>
-    <div class="msg" id="loginMsg"></div>
-    <input type="text" id="loginUser" placeholder="Username">
-    <input type="password" id="loginPass" placeholder="Password">
+<div id="auth">
+    <h2>Login / Register</h2>
+    <input id="user" placeholder="Username">
+    <input id="pass" type="password" placeholder="Password">
+    <button onclick="register()">Register</button>
     <button onclick="login()">Login</button>
-    <div class="switch" onclick="showRegister()">Belum punya akun? Daftar</div>
+    <p id="msg"></p>
 </div>
 
-<!-- REGISTER -->
-<div id="registerForm" class="hidden">
-    <h2>Register</h2>
-    <div class="msg" id="regMsg"></div>
-    <input type="text" id="regUser" placeholder="Username">
-    <input type="password" id="regPass" placeholder="Password">
-    <button onclick="register()">Daftar</button>
-    <div class="switch" onclick="showLogin()">Sudah punya akun? Login</div>
-</div>
+<div id="app" class="hidden">
+    <h2>Absensi 🚀</h2>
+    <p id="welcome"></p>
 
-<!-- DASHBOARD -->
-<div id="dashboard" class="hidden dashboard">
-    <h2>Welcome 👋</h2>
-    <p id="userDisplay"></p>
+    <input id="nama" placeholder="Nama">
+    <button onclick="tambah()">Tambah Absen</button>
+
+    <table id="tabel">
+        <tr>
+            <th>Nama</th>
+            <th>Waktu</th>
+            <th>Aksi</th>
+        </tr>
+    </table>
+
     <button onclick="logout()">Logout</button>
 </div>
 
 </div>
 
 <script>
-// ambil semua user
-function getUsers() {
-    return JSON.parse(localStorage.getItem("users")) || [];
+// HASH
+async function hashPassword(password) {
+    const data = new TextEncoder().encode(password);
+    const hash = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(hash))
+        .map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-// simpan user
-function saveUsers(users) {
-    localStorage.setItem("users", JSON.stringify(users));
-}
+// USER
+function getUsers(){ return JSON.parse(localStorage.getItem("users"))||[]; }
+function saveUsers(u){ localStorage.setItem("users",JSON.stringify(u)); }
+
+// SESSION
+function setSession(u){ localStorage.setItem("session",u); }
+function getSession(){ return localStorage.getItem("session"); }
 
 // REGISTER
-function register() {
-    let user = document.getElementById("regUser").value.trim();
-    let pass = document.getElementById("regPass").value.trim();
-    let msg = document.getElementById("regMsg");
-
-    if(user === "" || pass === "") {
-        msg.innerText = "Isi semua data!";
-        msg.style.color = "red";
-        return;
-    }
-
-    let users = getUsers();
-
-    // cek user sudah ada
-    let exists = users.find(u => u.username.toLowerCase() === user.toLowerCase());
-    if(exists) {
-        msg.innerText = "Username sudah digunakan!";
-        msg.style.color = "red";
-        return;
-    }
-
-    users.push({ username: user, password: pass });
+async function register(){
+    let u=user.value.trim();
+    let p=pass.value.trim();
+    if(!u||!p) return msg.innerText="Isi semua!";
+    let users=getUsers();
+    if(users.find(x=>x.username===u)) return msg.innerText="User ada!";
+    let h=await hashPassword(p);
+    users.push({username:u,password:h});
     saveUsers(users);
-
-    msg.innerText = "Register berhasil!";
-    msg.style.color = "green";
+    msg.innerText="Register sukses!";
 }
 
 // LOGIN
-function login() {
-    let user = document.getElementById("loginUser").value.trim();
-    let pass = document.getElementById("loginPass").value.trim();
-    let msg = document.getElementById("loginMsg");
-
-    let users = getUsers();
-
-    let found = users.find(u =>
-        u.username.toLowerCase() === user.toLowerCase() &&
-        u.password === pass
-    );
-
-    if(found) {
-        document.getElementById("loginForm").classList.add("hidden");
-        document.getElementById("dashboard").classList.remove("hidden");
-        document.getElementById("userDisplay").innerText = found.username;
+async function login(){
+    let u=user.value.trim();
+    let p=pass.value.trim();
+    let h=await hashPassword(p);
+    let users=getUsers();
+    let found=users.find(x=>x.username===u && x.password===h);
+    if(found){
+        setSession(u);
+        startApp();
     } else {
-        msg.innerText = "Username atau Password salah!";
-        msg.style.color = "red";
+        msg.innerText="Login gagal!";
     }
 }
 
 // LOGOUT
-function logout() {
+function logout(){
+    localStorage.removeItem("session");
     location.reload();
 }
 
-// SWITCH
-function showRegister() {
-    document.getElementById("loginForm").classList.add("hidden");
-    document.getElementById("registerForm").classList.remove("hidden");
+// APP
+function startApp(){
+    auth.classList.add("hidden");
+    app.classList.remove("hidden");
+    welcome.innerText="Welcome, "+getSession();
+    loadData();
 }
 
-function showLogin() {
-    document.getElementById("registerForm").classList.add("hidden");
-    document.getElementById("loginForm").classList.remove("hidden");
+// DATA ABSEN
+function getData(){
+    return JSON.parse(localStorage.getItem("absen"))||[];
 }
+
+function saveData(d){
+    localStorage.setItem("absen",JSON.stringify(d));
+}
+
+// TAMBAH
+function tambah(){
+    let n=nama.value.trim();
+    if(!n) return;
+    let data=getData();
+    data.push({
+        nama:n,
+        waktu:new Date().toLocaleString()
+    });
+    saveData(data);
+    nama.value="";
+    loadData();
+}
+
+// HAPUS
+function hapus(i){
+    let data=getData();
+    data.splice(i,1);
+    saveData(data);
+    loadData();
+}
+
+// LOAD TABLE
+function loadData(){
+    let data=getData();
+    let html = `
+    <tr>
+        <th>Nama</th>
+        <th>Waktu</th>
+        <th>Aksi</th>
+    </tr>`;
+    data.forEach((d,i)=>{
+        html += `
+        <tr>
+            <td>${d.nama}</td>
+            <td>${d.waktu}</td>
+            <td><button onclick="hapus(${i})">Hapus</button></td>
+        </tr>`;
+    });
+    tabel.innerHTML=html;
+}
+
+// AUTO LOGIN
+if(getSession()) startApp();
 </script>
 
 </body>
