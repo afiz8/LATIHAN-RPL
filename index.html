@@ -78,7 +78,7 @@ function getSession(){
     return localStorage.getItem("session");
 }
 
-// ===== LOGIN (BACKEND CONNECT) =====
+// ===== LOGIN =====
 async function login(){
     try{
         let u = user.value.trim();
@@ -111,7 +111,7 @@ async function login(){
         }
 
     }catch(e){
-        msg.innerText = "Server error! (cek backend)";
+        msg.innerText = "Server error!";
     }
 }
 
@@ -132,46 +132,39 @@ function startApp(){
     loadData();
 }
 
-// ===== DATA LOCAL (ABSEN) =====
-function getData(){
-    return JSON.parse(localStorage.getItem("absen")) || [];
-}
-function saveData(d){
-    localStorage.setItem("absen", JSON.stringify(d));
-}
-
-// ===== TAMBAH =====
-function tambah(){
+// ===== TAMBAH ABSEN (BACKEND) =====
+async function tambah(){
     let n = nama.value.trim();
     if(!n) return alert("Nama wajib diisi!");
 
-    let data = getData();
-
-    if(data.find(d => d.nama.toLowerCase() === n.toLowerCase())){
-        return alert("Nama sudah absen!");
-    }
-
-    data.push({
-        nama:n,
-        waktu:new Date().toLocaleString()
+    let res = await fetch(BASE_URL + "/absen", {
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body: JSON.stringify({ nama:n })
     });
 
-    saveData(data);
-    nama.value="";
-    loadData();
+    let data = await res.json();
+
+    if(data.status === "success"){
+        nama.value="";
+        loadData();
+    }
 }
 
 // ===== HAPUS =====
-function hapus(i){
-    let data = getData();
-    data.splice(i,1);
-    saveData(data);
+async function hapus(i){
+    await fetch(BASE_URL + "/absen/" + i, {
+        method:"DELETE"
+    });
     loadData();
 }
 
-// ===== LOAD TABLE =====
-function loadData(){
-    let data = getData();
+// ===== LOAD DATA (BACKEND) =====
+async function loadData(){
+    let res = await fetch(BASE_URL + "/absen");
+    let data = await res.json();
 
     let html = `
     <tr>
