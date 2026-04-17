@@ -2,32 +2,25 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Login & Absensi Pro - UNPAM</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Absensi UNPAM</title>
 
 <style>
 body{
     font-family: Arial;
-    background: linear-gradient(135deg,#667eea,#764ba2);
-    color:white;
     text-align:center;
+    background:#f4f4f4;
 }
-.container{ margin-top:20px; }
-input,button{
-    padding:10px;
-    margin:5px;
-    border-radius:8px;
-    border:none;
+.container{
+    background:white;
+    padding:20px;
+    margin:30px auto;
+    width:350px;
+    border-radius:10px;
+    box-shadow:0 0 10px rgba(0,0,0,0.1);
 }
-button{
-    background-color:#4CAF50;
-    color:white;
-    cursor:pointer;
+.hidden{
+    display:none;
 }
-button:hover{
-    background-color:#45a049;
-}
-.hidden{ display:none; }
 table{
     margin:auto;
     background:white;
@@ -42,11 +35,22 @@ td,th{
 .unpam-logo{
     font-size:48px;
 }
+input{
+    margin:5px;
+    padding:8px;
+    width:80%;
+}
+button{
+    padding:8px 15px;
+    margin:5px;
+    cursor:pointer;
+}
 </style>
 </head>
 
 <body>
 
+<!-- LOGIN & REGISTER -->
 <div class="container" id="auth">
     <div class="unpam-logo">🏛️</div>
     <h2>UNIVERSITAS PAMULANG</h2>
@@ -65,11 +69,11 @@ td,th{
     <button onclick="register()">Register</button>
 </div>
 
+<!-- APP -->
 <div class="container hidden" id="app">
     <div class="unpam-logo">🏛️</div>
     <h2 id="welcome"></h2>
     <h3 id="jam"></h3>
-    <h3 id="total"></h3>
 
     <input id="nama" placeholder="Nama">
     <button onclick="tambah()">Tambah Absen</button>
@@ -86,9 +90,6 @@ td,th{
 
 <script>
 
-// ===== GANTI LINK BACKEND LU DISINI =====
-const BASE_URL = "https://ea3bd0c5-1599-439c-ab7a-1cff4821a2e9-00-3cw8m4s5h9s39.pike.replit.dev";
-
 // ===== ELEMENT =====
 const user = document.getElementById("username");
 const pass = document.getElementById("password");
@@ -99,175 +100,127 @@ const welcome = document.getElementById("welcome");
 const nama = document.getElementById("nama");
 const tabel = document.getElementById("tabel");
 
+// ===== STORAGE =====
+function getUsers(){
+    return JSON.parse(localStorage.getItem("users") || "[]");
+}
+function setUsers(data){
+    localStorage.setItem("users", JSON.stringify(data));
+}
+
+function getAbsen(){
+    return JSON.parse(localStorage.getItem("absen") || "[]");
+}
+function setAbsen(data){
+    localStorage.setItem("absen", JSON.stringify(data));
+}
+
 // ===== SESSION =====
 function setSession(u){ localStorage.setItem("session",u); }
 function getSession(){ return localStorage.getItem("session"); }
 
-// ===== JAM REALTIME =====
-setInterval(()=>{
-    const jamElem = document.getElementById("jam");
-    if(jamElem) jamElem.innerText = "Jam: " + new Date().toLocaleTimeString();
-},1000);
-
-// ===== CEK SERVER =====
-async function cekServer(){
-    try{
-        let res = await fetch(BASE_URL);
-        if(res.ok){
-            console.log("Server ON");
-        } else {
-            alert("Backend ERROR!");
-        }
-    }catch{
-        alert("Backend OFFLINE!");
-    }
-}
-cekServer();
-
-// ===== REGISTER =====
-async function register(){
-    try{
-        let u = document.getElementById("reg_user").value.trim();
-        let p = document.getElementById("reg_pass").value.trim();
-
-        if(!u || !p) return alert("Isi semua!");
-
-        let res = await fetch(BASE_URL + "/register", {
-            method:"POST",
-            headers:{ "Content-Type":"application/json" },
-            body: JSON.stringify({ username:u, password:p })
-        });
-
-        let data = await res.json();
-
-        if(data.status === "success"){
-            alert("Register berhasil!");
-        }else{
-            alert("User sudah ada!");
-        }
-    }catch{
-        alert("Server error register!");
-    }
-}
-
-// ===== LOGIN =====
-async function login(){
-    try{
-        let u = user.value.trim();
-        let p = pass.value.trim();
-
-        if(!u || !p){
-            msg.innerText = "Isi username & password!";
-            return;
-        }
-
-        msg.innerText = "Loading...";
-
-        let res = await fetch(BASE_URL + "/login", {
-            method:"POST",
-            headers:{ "Content-Type":"application/json" },
-            body: JSON.stringify({ username:u, password:p })
-        });
-
-        if(!res.ok) throw new Error();
-
-        let data = await res.json();
-
-        if(data.status === "success"){
-            setSession(u);
-            msg.innerText = "";
-            startApp();
-        }else{
-            msg.innerText = "Login gagal!";
-        }
-
-    }catch{
-        msg.innerText = "Backend error / belum nyala!";
-    }
-}
-
-// ===== LOGOUT =====
 function logout(){
     localStorage.removeItem("session");
     location.reload();
 }
 
-// ===== START APP =====
-function startApp(){
-    if(!getSession()) return;
+// ===== JAM REALTIME =====
+setInterval(()=>{
+    let jamElem = document.getElementById("jam");
+    if(jamElem){
+        jamElem.innerText = "Jam: " + new Date().toLocaleTimeString();
+    }
+},1000);
 
+// ===== REGISTER =====
+function register(){
+    let u = document.getElementById("reg_user").value.trim();
+    let p = document.getElementById("reg_pass").value.trim();
+
+    if(!u || !p) return alert("Isi semua!");
+
+    let users = getUsers();
+
+    if(users.find(x => x.username === u)){
+        return alert("User sudah ada!");
+    }
+
+    users.push({username:u, password:p});
+    setUsers(users);
+
+    alert("Register berhasil!");
+}
+
+// ===== LOGIN =====
+function login(){
+    let u = user.value.trim();
+    let p = pass.value.trim();
+
+    let users = getUsers();
+
+    let found = users.find(x => x.username === u && x.password === p);
+
+    if(found){
+        setSession(u);
+        showApp();
+    }else{
+        msg.innerText = "Login gagal!";
+    }
+}
+
+// ===== TAMPIL APP =====
+function showApp(){
     auth.classList.add("hidden");
     app.classList.remove("hidden");
 
-    welcome.innerText = "Welcome, " + getSession();
+    let session = getSession();
+    welcome.innerText = "Welcome " + session;
+
     loadData();
 }
 
-// ===== TAMBAH =====
-async function tambah(){
-    try{
-        let n = nama.value.trim();
-        if(!n) return alert("Nama wajib!");
+// ===== TAMBAH ABSEN =====
+function tambah(){
+    let n = nama.value.trim();
+    if(!n) return alert("Isi nama!");
 
-        let res = await fetch(BASE_URL + "/absen", {
-            method:"POST",
-            headers:{ "Content-Type":"application/json" },
-            body: JSON.stringify({ nama:n })
-        });
+    let data = getAbsen();
 
-        let data = await res.json();
+    data.push({
+        nama:n,
+        waktu:new Date().toLocaleString()
+    });
 
-        if(data.status === "success"){
-            nama.value = "";
-            loadData();
-        }
-    }catch{
-        alert("Error tambah!");
-    }
-}
-
-// ===== HAPUS =====
-async function hapus(i){
-    try{
-        await fetch(BASE_URL + "/absen/" + i, { method:"DELETE" });
-        loadData();
-    }catch{
-        alert("Gagal hapus!");
-    }
+    setAbsen(data);
+    nama.value = "";
+    loadData();
 }
 
 // ===== LOAD DATA =====
-async function loadData(){
-    try{
-        let res = await fetch(BASE_URL + "/absen");
-        let data = await res.json();
+function loadData(){
+    let data = getAbsen();
+    let search = document.getElementById("search").value.toLowerCase();
 
-        let keyword = document.getElementById("search").value.toLowerCase();
+    let html = "<tr><th>No</th><th>Nama</th><th>Waktu</th></tr>";
 
-        let html = `<tr><th>Nama</th><th>Waktu</th><th>Aksi</th></tr>`;
+    data
+    .filter(x => x.nama.toLowerCase().includes(search))
+    .forEach((x,i)=>{
+        html += `
+        <tr>
+            <td>${i+1}</td>
+            <td>${x.nama}</td>
+            <td>${x.waktu}</td>
+        </tr>
+        `;
+    });
 
-        let filtered = data.filter(d => d.nama.toLowerCase().includes(keyword));
-
-        document.getElementById("total").innerText = "Total Absen: " + filtered.length;
-
-        filtered.forEach((d,i)=>{
-            html += `<tr>
-                <td>${d.nama}</td>
-                <td>${d.waktu}</td>
-                <td><button onclick="hapus(${i})">Hapus</button></td>
-            </tr>`;
-        });
-
-        tabel.innerHTML = html;
-
-    }catch{
-        console.log("Gagal load data");
-    }
+    tabel.innerHTML = html;
 }
 
 // ===== AUTO LOGIN =====
 if(getSession()){
-    startApp();
+    showApp();
 }
 
 </script>
